@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroRisk — Stroke & Brain Clot Assessment</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0a1628;--navy2:#112240;--blue:#1e6fff;--blue2:#3d8bff;--cyan:#00c6ff;
+  --red:#e63946;--orange:#f4a261;--green:#2ec4b6;--gold:#f9c74f;
+  --surface:#0d1e38;--surface2:#132039;--surface3:#1a2d4f;
+  --border:rgba(100,160,255,0.13);--text:#e8edf5;--text2:#8aa4c8;
+  --white:#ffffff;--radius:14px;--shadow:0 8px 40px rgba(0,0,0,0.45);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(30,111,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(30,111,255,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:500px;background:radial-gradient(ellipse,rgba(30,111,255,0.10) 0%,transparent 70%);pointer-events:none;z-index:0;animation:bgpulse 6s ease-in-out infinite}
+@keyframes bgpulse{0%,100%{opacity:.7}50%{opacity:1}}
+
+header{position:relative;z-index:10;background:linear-gradient(180deg,rgba(10,22,40,0.98),rgba(10,22,40,0.92));border-bottom:1px solid var(--border);backdrop-filter:blur(12px);padding:0 40px;display:flex;align-items:center;gap:16px;height:68px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 20px rgba(30,111,255,0.4)}
+.logo-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700}
+.logo-name span{color:var(--blue2)}
+.logo-sub{font-size:11px;color:var(--text2);margin-top:1px;font-weight:300;letter-spacing:.08em;text-transform:uppercase}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{padding:5px 14px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.pill-blue{background:rgba(30,111,255,0.15);color:var(--blue2);border:1px solid rgba(30,111,255,0.3)}
+.pill-green{background:rgba(46,196,182,0.12);color:var(--green);border:1px solid rgba(46,196,182,0.25)}
+
+.hero{position:relative;z-index:5;display:grid;grid-template-columns:1fr 400px;gap:0;max-width:1140px;margin:44px auto 0;padding:0 24px;align-items:center}
+.hero h2{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;line-height:1.2;margin-bottom:14px}
+.hero h2 em{font-style:normal;color:var(--blue2)}
+.hero p{font-size:14.5px;color:var(--text2);line-height:1.75;max-width:460px;font-weight:300}
+.hero-stats{display:flex;gap:28px;margin-top:26px}
+.stat{border-left:2px solid var(--blue);padding-left:14px}
+.stat-num{font-size:22px;font-weight:700;color:var(--white)}
+.stat-lbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em}
+
+.brain-wrap{position:relative;display:flex;align-items:center;justify-content:center;height:320px}
+.ring1{position:absolute;width:290px;height:290px;border-radius:50%;border:1px solid rgba(30,111,255,0.14);animation:rspin 22s linear infinite}
+.ring2{position:absolute;width:230px;height:230px;border-radius:50%;border:1px dashed rgba(0,198,255,0.11);animation:rspin 14s linear infinite reverse}
+@keyframes rspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.brain-glow{position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(30,111,255,0.16) 0%,transparent 70%);animation:bpulse 3s ease-in-out infinite}
+@keyframes bpulse{0%,100%{transform:scale(.95);opacity:.7}50%{transform:scale(1.06);opacity:1}}
+
+.main{position:relative;z-index:5;max-width:980px;margin:44px auto;padding:0 20px 80px}
+
+.stepper{display:flex;align-items:center;justify-content:center;margin-bottom:36px}
+.stp{display:flex;align-items:center;gap:9px;padding:9px 20px;border-radius:99px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .3s}
+.stp.active{background:rgba(30,111,255,0.15);color:var(--blue2);border:1px solid rgba(30,111,255,0.35)}
+.stp.done{color:var(--green)}
+.stp-n{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:rgba(255,255,255,0.06);transition:all .3s}
+.stp.active .stp-n{background:var(--blue);color:#fff}
+.stp.done .stp-n{background:var(--green);color:#fff}
+.stp-line{width:36px;height:1px;background:var(--border)}
+
+.fp{display:none;animation:fadein .4s ease}
+.fp.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.sec-title{font-family:'Playfair Display',serif;font-size:19px;font-weight:600;margin-bottom:5px;color:var(--white)}
+.sec-sub{font-size:13px;color:var(--text2);margin-bottom:22px;font-weight:300}
+
+.fg3{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.fg2{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.fld input,.fld select{background:var(--surface3);border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;transition:border-color .2s,box-shadow .2s;outline:none;appearance:none;-webkit-appearance:none}
+.fld input::placeholder{color:rgba(138,164,200,0.4)}
+.fld input:focus,.fld select:focus{border-color:var(--blue2);background:rgba(26,45,79,0.9);box-shadow:0 0 0 3px rgba(30,111,255,0.12)}
+.fld select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238aa4c8' d='M5 7L0 2h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;cursor:pointer}
+.fld select option{background:#1a2d4f}
+
+.tg-group{display:flex;gap:8px;flex-wrap:wrap}
+.tg-btn{padding:8px 15px;border-radius:99px;border:1.5px solid var(--border);background:transparent;color:var(--text2);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.tg-btn:hover{border-color:rgba(30,111,255,0.4);color:var(--text)}
+.tg-btn.sel-r{background:rgba(230,57,70,0.15);border-color:var(--red);color:var(--red)}
+.tg-btn.sel-b{background:rgba(30,111,255,0.15);border-color:var(--blue2);color:var(--blue2)}
+
+.glass{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);margin-bottom:18px}
+
+.nav-row{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+.btn{padding:11px 26px;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;border:none;cursor:pointer;letter-spacing:.02em;transition:all .2s}
+.btn-out{background:transparent;color:var(--text2);border:1.5px solid var(--border)}
+.btn-out:hover{border-color:rgba(30,111,255,0.4);color:var(--text)}
+.btn-pri{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;box-shadow:0 4px 20px rgba(30,111,255,0.35)}
+.btn-pri:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(30,111,255,0.45)}
+.btn-emg{background:linear-gradient(135deg,var(--red),#c1121f);color:#fff;box-shadow:0 4px 20px rgba(230,57,70,0.35);width:100%;margin-top:12px;padding:14px;font-size:15px}
+.btn-emg:hover{transform:translateY(-2px)}
+.btn-reset{background:transparent;color:var(--text2);border:1.5px solid var(--border);width:100%;margin-top:8px;padding:11px}
+.btn-reset:hover{border-color:rgba(30,111,255,0.4);color:var(--text)}
+
+#results-pg{display:none}
+#results-pg.active{display:block;animation:fadein .5s ease}
+
+.res-top{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
+.risk-card{border-radius:var(--radius);padding:26px;position:relative;overflow:hidden}
+.risk-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.04),transparent 60%)}
+.rc-low{background:linear-gradient(135deg,rgba(46,196,182,0.12),rgba(46,196,182,0.04));border:1px solid rgba(46,196,182,0.25)}
+.rc-med{background:linear-gradient(135deg,rgba(244,162,97,0.12),rgba(244,162,97,0.04));border:1px solid rgba(244,162,97,0.25)}
+.rc-hi{background:linear-gradient(135deg,rgba(230,57,70,0.15),rgba(230,57,70,0.04));border:1px solid rgba(230,57,70,0.3)}
+.risk-lv{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:5px}
+.rc-low .risk-lv{color:var(--green)}.rc-med .risk-lv{color:var(--orange)}.rc-hi .risk-lv{color:var(--red)}
+.risk-dsc{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:18px}
+.sbar-wrap{margin:14px 0 4px}
+.sbar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.sbar-top span:first-child{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.sbar-top span:last-child{font-size:20px;font-weight:700;color:var(--white)}
+.sbar-track{background:rgba(255,255,255,0.06);border-radius:99px;height:9px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:99px;transition:width .9s cubic-bezier(.4,0,.2,1)}
+
+.fac-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.fac-item{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);font-size:13px}
+.fac-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.fac-pts{margin-left:auto;font-size:11px;font-weight:700;opacity:.75}
+
+.ai-panel{background:linear-gradient(135deg,rgba(30,111,255,0.08),rgba(0,198,255,0.04));border:1px solid rgba(30,111,255,0.2);border-radius:var(--radius);padding:22px 24px;position:relative;overflow:hidden}
+.ai-panel::before{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(30,111,255,0.12),transparent 70%)}
+.ai-hdr{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.ai-badge{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.ai-txt{font-size:13.5px;line-height:1.78;color:var(--text2)}
+.ai-txt strong{color:var(--text)}
+
+.recs{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:18px}
+.rec{background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:15px;transition:transform .2s,border-color .2s}
+.rec:hover{transform:translateY(-3px);border-color:rgba(30,111,255,0.3)}
+.rec-ico{font-size:21px;margin-bottom:7px}
+.rec-title{font-size:13px;font-weight:700;color:var(--white);margin-bottom:3px}
+.rec-txt{font-size:12px;color:var(--text2);line-height:1.5}
+
+.chart-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-top:18px}
+.chart-lbl{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.07em}
+
+.disc{text-align:center;font-size:11.5px;color:var(--text2);opacity:.6;margin-top:28px;line-height:1.65}
+
+.dot-ld{display:inline-flex;gap:4px;align-items:center}
+.dot-ld span{width:6px;height:6px;border-radius:50%;background:var(--blue2);animation:db .8s ease-in-out infinite}
+.dot-ld span:nth-child(2){animation-delay:.15s}.dot-ld span:nth-child(3){animation-delay:.3s}
+@keyframes db{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+
+.overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(10,22,40,0.93);backdrop-filter:blur(10px);flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.overlay.show{display:flex}
+.ov-txt{font-size:17px;font-weight:600;color:var(--text)}
+.ov-sub{font-size:13px;color:var(--text2)}
+
+@media(max-width:740px){
+  .hero{grid-template-columns:1fr;padding:0 14px}
+  .brain-wrap{display:none}
+  .fg3,.fg2{grid-template-columns:1fr 1fr}
+  .res-top{grid-template-columns:1fr}
+  .fac-grid{grid-template-columns:1fr}
+  .recs{grid-template-columns:1fr 1fr}
+  header{padding:0 14px}
+  .hero h2{font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="overlay" id="ovlay">
+  <div style="font-size:50px;animation:bpulse 1.5s ease-in-out infinite">🧠</div>
+  <div class="ov-txt">Analysing Risk Profile <span class="dot-ld"><span></span><span></span><span></span></span></div>
+  <div class="ov-sub">Processing 15 clinical parameters…</div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <div>
+      <div class="logo-name">Neuro<span>Risk</span></div>
+      <div class="logo-sub">Stroke &amp; Brain Clot Assessment</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="pill pill-green">● System Online</span>
+    <span class="pill pill-blue">AI Assisted v2.0</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div>
+    <h2>Assess Your <em>Stroke &amp;<br>Brain Clot</em> Risk</h2>
+    <p>A clinically-informed 3-step screening tool using 15+ parameters to evaluate stroke and cerebral thrombosis risk. Get a personalised risk profile in under 2 minutes.</p>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">15+</div><div class="stat-lbl">Risk Factors</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-lbl">Step Process</div></div>
+      <div class="stat"><div class="stat-num">AI</div><div class="stat-lbl">Analysis</div></div>
+    </div>
+  </div>
+  <div class="brain-wrap">
+    <div class="ring1"></div><div class="ring2"></div><div class="brain-glow"></div>
+    <svg width="196" height="196" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 22px rgba(30,111,255,0.5));position:relative;z-index:2">
+      <defs>
+        <linearGradient id="bf" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e6fff" stop-opacity=".26"/><stop offset="100%" stop-color="#00c6ff" stop-opacity=".12"/></linearGradient>
+        <linearGradient id="bs" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3d8bff"/><stop offset="100%" stop-color="#00c6ff"/></linearGradient>
+        <filter id="gf"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <circle cx="100" cy="100" r="88" fill="url(#bf)" opacity=".3"/>
+      <!-- Left hemi -->
+      <path d="M100 152 C66 152 40 136 30 113 C20 90 24 67 38 51 C52 35 70 28 87 30 C95 31 100 36 100 44Z" fill="url(#bf)" stroke="url(#bs)" stroke-width="1.6" filter="url(#gf)"/>
+      <!-- Right hemi -->
+      <path d="M100 152 C134 152 160 136 170 113 C180 90 176 67 162 51 C148 35 130 28 113 30 C105 31 100 36 100 44Z" fill="url(#bf)" stroke="url(#bs)" stroke-width="1.6" filter="url(#gf)"/>
+      <!-- Divider -->
+      <line x1="100" y1="44" x2="100" y2="152" stroke="url(#bs)" stroke-width="1" stroke-dasharray="4 3" opacity=".5"/>
+      <!-- Left folds -->
+      <path d="M56 64 Q49 74 53 86" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M41 84 Q39 97 45 107" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M49 109 Q53 119 63 124" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M66 129 Q75 137 84 139" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M61 50 Q71 43 83 42" stroke="#00c6ff" stroke-width="1.1" fill="none" stroke-linecap="round" opacity=".55"/>
+      <!-- Right folds -->
+      <path d="M144 64 Q151 74 147 86" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M159 84 Q161 97 155 107" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M151 109 Q147 119 137 124" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M134 129 Q125 137 116 139" stroke="#3d8bff" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".65"/>
+      <path d="M139 50 Q129 43 117 42" stroke="#00c6ff" stroke-width="1.1" fill="none" stroke-linecap="round" opacity=".55"/>
+      <!-- Brainstem -->
+      <path d="M88 152 Q88 167 92 174 Q96 179 100 179 Q104 179 108 174 Q112 167 112 152" fill="url(#bf)" stroke="url(#bs)" stroke-width="1.5"/>
+      <!-- Arteries -->
+      <path d="M100 44 Q88 58 76 70 Q68 80 68 91" stroke="#e63946" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".4"/>
+      <path d="M100 44 Q112 58 124 70 Q132 80 132 91" stroke="#e63946" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".4"/>
+      <!-- Pulse dots -->
+      <circle cx="72" cy="90" r="2.5" fill="#00c6ff" opacity=".8"><animate attributeName="opacity" values=".8;.2;.8" dur="2s" repeatCount="indefinite"/></circle>
+      <circle cx="128" cy="90" r="2.5" fill="#00c6ff" opacity=".8"><animate attributeName="opacity" values=".8;.2;.8" dur="2.3s" repeatCount="indefinite"/></circle>
+      <circle cx="100" cy="114" r="2.5" fill="#f9c74f" opacity=".7"><animate attributeName="opacity" values=".7;.15;.7" dur="1.8s" repeatCount="indefinite"/></circle>
+    </svg>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="stp active" id="stp1"><span class="stp-n">1</span>Vital Signs</div>
+    <div class="stp-line"></div>
+    <div class="stp" id="stp2"><span class="stp-n">2</span>Medical History</div>
+    <div class="stp-line"></div>
+    <div class="stp" id="stp3"><span class="stp-n">3</span>Lifestyle &amp; Symptoms</div>
+  </div>
+
+  <!-- Page 1 -->
+  <div class="fp active" id="fp1">
+    <div class="glass">
+      <div class="sec-title">Vital Signs &amp; Demographics</div>
+      <div class="sec-sub">Enter the patient's current measurements</div>
+      <div class="fg3">
+        <div class="fld"><label>Age (years)</label><input type="number" id="age" placeholder="e.g. 58" min="0" max="120"></div>
+        <div class="fld"><label>Biological Sex</label><select id="sex"><option value="male">Male</option><option value="female">Female</option></select></div>
+        <div class="fld"><label>Heart Rate (bpm)</label><input type="number" id="hr" placeholder="e.g. 78"></div>
+        <div class="fld"><label>Systolic BP (mmHg)</label><input type="number" id="sys" placeholder="e.g. 130"></div>
+        <div class="fld"><label>Diastolic BP (mmHg)</label><input type="number" id="dia" placeholder="e.g. 85"></div>
+        <div class="fld"><label>BMI</label><input type="number" id="bmi" placeholder="e.g. 27.5" step="0.1"></div>
+      </div>
+    </div>
+    <div class="nav-row"><button class="btn btn-pri" onclick="goStep(2)">Next: Medical History →</button></div>
+  </div>
+
+  <!-- Page 2 -->
+  <div class="fp" id="fp2">
+    <div class="glass">
+      <div class="sec-title">Medical History</div>
+      <div class="sec-sub">Select conditions that apply to the patient</div>
+      <div class="fg2" style="margin-bottom:18px">
+        <div class="fld"><label>Diabetes</label><select id="diabetes"><option value="no">No</option><option value="type2">Type 2</option><option value="type1">Type 1</option></select></div>
+        <div class="fld"><label>Cholesterol</label><select id="chol"><option value="normal">Normal (&lt;200 mg/dL)</option><option value="borderline">Borderline (200–239)</option><option value="high">High (≥240 mg/dL)</option></select></div>
+        <div class="fld"><label>Atrial Fibrillation (AFib)</label><select id="afib"><option value="no">No</option><option value="yes">Yes</option></select></div>
+        <div class="fld"><label>Previous Stroke / TIA</label><select id="prevs"><option value="no">No</option><option value="tia">TIA (Mini-Stroke)</option><option value="stroke">Full Stroke</option></select></div>
+        <div class="fld"><label>Blood Clotting Disorder</label><select id="clot"><option value="no">None</option><option value="thromb">Thrombophilia</option><option value="antip">Antiphospholipid Syndrome</option></select></div>
+        <div class="fld"><label>Heart Disease</label><select id="heart"><option value="no">None</option><option value="mild">Mild / Treated</option><option value="severe">Severe / Active</option></select></div>
+        <div class="fld"><label>Carotid Artery Disease</label><select id="carotid"><option value="no">No</option><option value="mild">Mild Stenosis</option><option value="severe">Severe Stenosis</option></select></div>
+        <div class="fld"><label>Kidney Disease</label><select id="kidney"><option value="no">No</option><option value="ckd">Chronic Kidney Disease</option></select></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Family History (select all)</div>
+        <div class="tg-group">
+          <button class="tg-btn" id="fam-s" onclick="tog('fam-s','r')">Stroke</button>
+          <button class="tg-btn" id="fam-h" onclick="tog('fam-h','r')">Heart Disease</button>
+          <button class="tg-btn" id="fam-c" onclick="tog('fam-c','r')">Blood Clots</button>
+          <button class="tg-btn" id="fam-d" onclick="tog('fam-d','r')">Diabetes</button>
+          <button class="tg-btn" id="fam-n" onclick="clearFam()">None Known</button>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row"><button class="btn btn-out" onclick="goStep(1)">← Back</button><button class="btn btn-pri" onclick="goStep(3)">Next: Lifestyle →</button></div>
+  </div>
+
+  <!-- Page 3 -->
+  <div class="fp" id="fp3">
+    <div class="glass">
+      <div class="sec-title">Lifestyle Factors &amp; Current Symptoms</div>
+      <div class="sec-sub">Current habits and any symptoms being experienced</div>
+      <div class="fg2" style="margin-bottom:20px">
+        <div class="fld"><label>Smoking Status</label><select id="smoke"><option value="never">Never Smoked</option><option value="former">Former Smoker</option><option value="current">Current Smoker</option><option value="heavy">Heavy Smoker (&gt;1 pack/day)</option></select></div>
+        <div class="fld"><label>Alcohol Consumption</label><select id="alc"><option value="none">None / Rare</option><option value="mod">Moderate (1–2/day)</option><option value="heavy">Heavy (&gt;3/day)</option></select></div>
+        <div class="fld"><label>Physical Activity</label><select id="act"><option value="active">Active (4+ days/week)</option><option value="mod">Moderate (2–3 days/week)</option><option value="sed">Sedentary / Inactive</option></select></div>
+        <div class="fld"><label>Stress Level</label><select id="stress"><option value="low">Low</option><option value="mod">Moderate</option><option value="high">High / Chronic</option></select></div>
+        <div class="fld"><label>Sleep Quality</label><select id="sleep"><option value="good">Good (7–9 hrs)</option><option value="poor">Poor / Disrupted</option><option value="apnea">Sleep Apnea</option></select></div>
+        <div class="fld"><label>Oral Contraceptives</label><select id="ocp"><option value="no">No / N/A</option><option value="yes">Yes (female, smoking)</option></select></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Current Symptoms — select all present (urgent if multiple)</div>
+        <div class="tg-group">
+          <button class="tg-btn" id="sy-hd" onclick="togSym('sy-hd')">Sudden severe headache</button>
+          <button class="tg-btn" id="sy-vi" onclick="togSym('sy-vi')">Vision changes</button>
+          <button class="tg-btn" id="sy-wk" onclick="togSym('sy-wk')">Arm / face weakness</button>
+          <button class="tg-btn" id="sy-sp" onclick="togSym('sy-sp')">Speech difficulty</button>
+          <button class="tg-btn" id="sy-dz" onclick="togSym('sy-dz')">Dizziness / loss of balance</button>
+          <button class="tg-btn" id="sy-nb" onclick="togSym('sy-nb')">Sudden numbness</button>
+          <button class="tg-btn" id="sy-cf" onclick="togSym('sy-cf')">Confusion</button>
+          <button class="tg-btn" id="sy-no" onclick="clearSym()">None</button>
+        </div>
+      </div>
+    </div>
+    <div class="nav-row"><button class="btn btn-out" onclick="goStep(2)">← Back</button><button class="btn btn-pri" onclick="runAnalysis()">Analyse Risk →</button></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-pg">
+    <div class="res-top">
+      <div class="risk-card" id="riskCard">
+        <div class="risk-lv" id="riskLv"></div>
+        <div class="risk-dsc" id="riskDsc"></div>
+        <div class="sbar-wrap">
+          <div class="sbar-top"><span>Risk Score</span><span id="scoreNum"></span></div>
+          <div class="sbar-track"><div class="sbar-fill" id="sbarFill"></div></div>
+        </div>
+        <button class="btn btn-emg" id="emgBtn" style="display:none" onclick="callDoc()">🚨 Contact Emergency Services Now</button>
+        <button class="btn btn-reset" onclick="resetAll()">← New Assessment</button>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px">Active Risk Factors</div>
+        <div class="fac-grid" id="facList"></div>
+      </div>
+    </div>
+
+    <div class="ai-panel">
+      <div class="ai-hdr"><span style="font-size:20px">🧠</span><span class="ai-badge">AI Analysis</span><span style="font-size:12px;color:var(--text2);margin-left:4px">NeuroRisk Engine v2.0</span></div>
+      <div class="ai-txt" id="aiTxt"></div>
+    </div>
+
+    <div style="margin-top:26px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:13px">Personalised Recommendations</div>
+      <div class="recs" id="recsList"></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-lbl">Vitals — Patient Values vs Normal Reference</div>
+      <canvas id="mainChart" style="max-height:250px"></canvas>
+    </div>
+
+    <p class="disc">⚕️ NeuroRisk is a prototype screening tool and is <strong>not</strong> a substitute for professional medical diagnosis, advice, or treatment. Always consult a qualified healthcare provider.</p>
+  </div>
+</div>
+
+<script>
+let curStep=1, chartInst, sel=new Set();
+
+function goStep(n){
+  document.getElementById('fp'+curStep).classList.remove('active');
+  document.getElementById('stp'+curStep).classList.remove('active');
+  if(n>curStep) document.getElementById('stp'+curStep).classList.add('done');
+  curStep=n;
+  document.getElementById('fp'+n).classList.add('active');
+  document.getElementById('stp'+n).classList.add('active');
+  document.getElementById('stp'+n).classList.remove('done');
+  window.scrollTo({top:document.querySelector('.stepper').offsetTop-20,behavior:'smooth'});
+}
+function tog(id,type){
+  const el=document.getElementById(id);
+  const cls=type==='r'?'sel-r':'sel-b';
+  el.classList.toggle(cls);
+  if(el.classList.contains(cls)) sel.add(id); else sel.delete(id);
+}
+function clearFam(){
+  ['fam-s','fam-h','fam-c','fam-d'].forEach(i=>{document.getElementById(i).classList.remove('sel-r');sel.delete(i)});
+  const n=document.getElementById('fam-n');n.classList.toggle('sel-b');
+  if(n.classList.contains('sel-b')) sel.add('fam-n'); else sel.delete('fam-n');
+}
+const symIds=['sy-hd','sy-vi','sy-wk','sy-sp','sy-dz','sy-nb','sy-cf'];
+function togSym(id){
+  document.getElementById('sy-no').classList.remove('sel-b');sel.delete('sy-no');
+  const el=document.getElementById(id);el.classList.toggle('sel-r');
+  if(el.classList.contains('sel-r')) sel.add(id); else sel.delete(id);
+}
+function clearSym(){
+  symIds.forEach(i=>{document.getElementById(i).classList.remove('sel-r');sel.delete(i)});
+  const n=document.getElementById('sy-no');n.classList.toggle('sel-b');
+  if(n.classList.contains('sel-b')) sel.add('sy-no'); else sel.delete('sy-no');
+}
+function runAnalysis(){
+  document.getElementById('ovlay').classList.add('show');
+  setTimeout(()=>{document.getElementById('ovlay').classList.remove('show');compute();},1900);
+}
+function compute(){
+  const age=parseInt(document.getElementById('age').value)||0;
+  const sys=parseInt(document.getElementById('sys').value)||0;
+  const dia=parseInt(document.getElementById('dia').value)||0;
+  const hr=parseInt(document.getElementById('hr').value)||0;
+  const bmi=parseFloat(document.getElementById('bmi').value)||0;
+  const sex=document.getElementById('sex').value;
+  const diabetes=document.getElementById('diabetes').value;
+  const chol=document.getElementById('chol').value;
+  const afib=document.getElementById('afib').value;
+  const prevs=document.getElementById('prevs').value;
+  const clot=document.getElementById('clot').value;
+  const heart=document.getElementById('heart').value;
+  const carotid=document.getElementById('carotid').value;
+  const kidney=document.getElementById('kidney').value;
+  const smoke=document.getElementById('smoke').value;
+  const alc=document.getElementById('alc').value;
+  const act=document.getElementById('act').value;
+  const stress=document.getElementById('stress').value;
+  const sleep=document.getElementById('sleep').value;
+  const ocp=document.getElementById('ocp').value;
+
+  let sc=0; const facs=[];
+  const add=(name,pts,sev)=>{sc+=pts;facs.push({name,pts,sev})};
+
+  if(age>=75) add('Age ≥75',3,'high');
+  else if(age>=65) add('Age 65–74',2,'med');
+  else if(age>=55) add('Age 55–64',1,'low');
+
+  if(sys>=180||dia>=110) add('Hypertensive Crisis',3,'high');
+  else if(sys>=160||dia>=100) add('Stage 2 Hypertension',2,'high');
+  else if(sys>=130||dia>=85) add('Elevated BP',1,'med');
+
+  if(hr>=120) add('Tachycardia (≥120 bpm)',2,'high');
+  else if(hr>=100) add('Elevated Heart Rate',1,'med');
+
+  if(bmi>=35) add('Severe Obesity (BMI≥35)',2,'high');
+  else if(bmi>=30) add('Obesity (BMI≥30)',1,'med');
+
+  if(sex==='male') add('Male Sex',1,'low');
+
+  if(diabetes==='type1') add('Type 1 Diabetes',2,'high');
+  else if(diabetes==='type2') add('Type 2 Diabetes',1,'med');
+
+  if(chol==='high') add('High Cholesterol',2,'high');
+  else if(chol==='borderline') add('Borderline Cholesterol',1,'low');
+
+  if(afib==='yes') add('Atrial Fibrillation',3,'high');
+  if(prevs==='stroke') add('Previous Stroke',4,'high');
+  else if(prevs==='tia') add('Previous TIA',3,'high');
+  if(clot!=='no') add('Clotting Disorder',3,'high');
+  if(heart==='severe') add('Severe Heart Disease',2,'high');
+  else if(heart==='mild') add('Heart Disease',1,'med');
+  if(carotid==='severe') add('Severe Carotid Stenosis',3,'high');
+  else if(carotid==='mild') add('Carotid Artery Disease',1,'med');
+  if(kidney==='ckd') add('Chronic Kidney Disease',1,'med');
+
+  if(sel.has('fam-s')) add('Family: Stroke',2,'med');
+  if(sel.has('fam-c')) add('Family: Blood Clots',2,'med');
+  if(sel.has('fam-h')) add('Family: Heart Disease',1,'low');
+  if(sel.has('fam-d')) add('Family: Diabetes',1,'low');
+
+  if(smoke==='heavy') add('Heavy Smoker',3,'high');
+  else if(smoke==='current') add('Current Smoker',2,'high');
+  else if(smoke==='former') add('Former Smoker',1,'low');
+
+  if(alc==='heavy') add('Heavy Alcohol Use',2,'high');
+  else if(alc==='mod') add('Moderate Alcohol',1,'low');
+
+  if(act==='sed') add('Sedentary Lifestyle',2,'med');
+  else if(act==='mod') add('Low Activity Level',1,'low');
+
+  if(stress==='high') add('Chronic High Stress',2,'med');
+  else if(stress==='mod') add('Moderate Stress',1,'low');
+
+  if(sleep==='apnea') add('Sleep Apnea',2,'high');
+  else if(sleep==='poor') add('Poor Sleep Quality',1,'med');
+
+  if(ocp==='yes') add('OCP + Smoking (Female)',2,'high');
+
+  const activeSym=symIds.filter(s=>sel.has(s));
+  const ns=activeSym.length;
+  if(ns>=3) add(`${ns} Acute Stroke Symptoms`,ns*2+2,'high');
+  else if(ns>0) add(`${ns} Acute Symptom(s)`,ns*2,'high');
+
+  const MAX=32;
+  const pct=Math.min((sc/MAX)*100,100);
+  let lv,cls,col,dsc,aiH,recs;
+
+  if(sc>=15||ns>=2){
+    lv='🔴  High Risk';cls='rc-hi';col='#e63946';
+    dsc='Multiple critical indicators detected. Immediate medical evaluation is strongly recommended.';
+    const top=facs.filter(f=>f.sev==='high').slice(0,3).map(f=>f.name);
+    aiH=`<strong>High-risk profile detected</strong> across ${facs.length} clinical parameters. Key drivers include <strong>${top.join(', ')}</strong>${facs.length>3?' among others':''}. This profile significantly elevates the probability of ischaemic stroke or cerebral thrombosis. <strong>Prompt consultation with a neurologist or emergency physician is essential.</strong> Early intervention can prevent irreversible neurological damage.`;
+    recs=[
+      {i:'🏥',t:'Seek Immediate Care',d:'Visit an emergency department or call your doctor today. Do not delay.'},
+      {i:'💊',t:'Medication Review',d:'Discuss anticoagulant, antihypertensive, or statin therapy with your physician.'},
+      {i:'📉',t:'Daily BP Monitoring',d:'Use a home monitor; log readings and aim for below 130/80 mmHg consistently.'},
+      {i:'🚭',t:'Stop Smoking Now',d:'Smoking cessation is one of the highest-impact stroke prevention actions.'},
+      {i:'🥗',t:'Mediterranean Diet',d:'Reduce saturated fats, increase omega-3s, leafy greens, and whole grains.'},
+      {i:'🚨',t:'Know FAST Signs',d:'Face drooping, Arm weakness, Speech trouble — Time to call emergency services.'},
+    ];
+  } else if(sc>=8){
+    lv='🟠  Moderate Risk';cls='rc-med';col='#f4a261';
+    dsc='Several elevated risk factors identified. Lifestyle improvements and a medical review are advised.';
+    const hiFs=facs.filter(f=>f.sev==='high').map(f=>f.name);
+    aiH=`<strong>Moderate risk profile identified</strong> with ${facs.length} contributing factor${facs.length!==1?'s':''}. ${hiFs.length?'Key concerns: <strong>'+hiFs.slice(0,3).join(', ')+'</strong>. ':''} While not immediately critical, unmanaged these indicators can progress to significantly elevated stroke risk. <strong>A preventive health review with your GP is recommended within the next few weeks.</strong>`;
+    recs=[
+      {i:'🩺',t:'Schedule a GP Review',d:'Request a full preventive health screening including lipids and blood pressure.'},
+      {i:'🏃',t:'Exercise Regularly',d:'Aim for 150 min/week of moderate aerobic activity to lower BP and clot risk.'},
+      {i:'😴',t:'Improve Sleep',d:'Target 7–9 hours nightly; poor sleep raises cortisol and clot-formation risk.'},
+      {i:'🥗',t:'Dietary Changes',d:'Reduce sodium below 2g/day; increase fruits, vegetables, and whole grains.'},
+      {i:'🧘',t:'Manage Stress',d:'Chronic stress raises blood pressure — consider meditation, yoga, or counselling.'},
+      {i:'🚭',t:'Reduce or Quit Smoking',d:'Even reducing cigarettes lowers risk; discuss cessation aids with your doctor.'},
+    ];
+  } else {
+    lv='🟢  Low Risk';cls='rc-low';col='#2ec4b6';
+    dsc='Few risk indicators detected. Continue healthy habits and maintain regular health check-ups.';
+    aiH=`<strong>Low-risk profile detected</strong>${facs.length?` with ${facs.length} minor factor${facs.length!==1?'s':''}`:' — no significant risk factors found'}. Current vitals and lifestyle profile are broadly within safe parameters. <strong>Continue regular check-ups</strong> and maintain existing healthy behaviours. Annual BP and cholesterol screening is recommended for ongoing prevention.`;
+    recs=[
+      {i:'✅',t:'Great Profile!',d:'Your risk is low. Stay consistent with healthy habits and regular monitoring.'},
+      {i:'🏋️',t:'Stay Active',d:'Maintain 150+ min/week of exercise to preserve cardiovascular and brain health.'},
+      {i:'🩺',t:'Annual Screening',d:'Check blood pressure and cholesterol once a year — prevention is best.'},
+      {i:'🧠',t:'Brain Health',d:'Mental stimulation, strong social connections, and good sleep protect brain health long-term.'},
+    ];
+  }
+
+  // Render risk card
+  document.getElementById('riskCard').className='risk-card '+cls;
+  document.getElementById('riskLv').textContent=lv;
+  document.getElementById('riskDsc').textContent=dsc;
+  document.getElementById('scoreNum').textContent=sc+' / '+MAX;
+  const fill=document.getElementById('sbarFill');
+  fill.style.width='0%';
+  fill.style.background=`linear-gradient(90deg,${col}88,${col})`;
+  setTimeout(()=>fill.style.width=pct+'%',100);
+  document.getElementById('emgBtn').style.display=cls==='rc-hi'?'block':'none';
+
+  // Factors
+  const sc2={high:'#e63946',med:'#f4a261',low:'#2ec4b6'};
+  document.getElementById('facList').innerHTML=facs.length
+    ?facs.map(f=>`<div class="fac-item"><div class="fac-dot" style="background:${sc2[f.sev]}"></div><span>${f.name}</span><span class="fac-pts" style="color:${sc2[f.sev]}">+${f.pts}</span></div>`).join('')
+    :'<div class="fac-item"><div class="fac-dot" style="background:#2ec4b6"></div><span>No significant factors</span></div>';
+
+  document.getElementById('aiTxt').innerHTML=aiH;
+  document.getElementById('recsList').innerHTML=recs.map(r=>`<div class="rec"><div class="rec-ico">${r.i}</div><div class="rec-title">${r.t}</div><div class="rec-txt">${r.d}</div></div>`).join('');
+
+  // Chart
+  if(chartInst) chartInst.destroy();
+  const vals=[age,sys,dia,hr,bmi];
+  const refs=[65,120,80,75,25];
+  const labs=['Age','Systolic BP','Diastolic BP','Heart Rate','BMI'];
+  const bgc=vals.map((v,i)=>v>refs[i]*1.25?'rgba(230,57,70,0.7)':v>refs[i]?'rgba(244,162,97,0.7)':'rgba(46,196,182,0.7)');
+  const bdc=vals.map((v,i)=>v>refs[i]*1.25?'#e63946':v>refs[i]?'#f4a261':'#2ec4b6');
+  chartInst=new Chart(document.getElementById('mainChart'),{
+    type:'bar',
+    data:{
+      labels:labs,
+      datasets:[
+        {label:'Patient Values',data:vals,backgroundColor:bgc,borderColor:bdc,borderWidth:2,borderRadius:8},
+        {label:'Normal Reference',data:refs,backgroundColor:'rgba(255,255,255,0.05)',borderColor:'rgba(255,255,255,0.18)',borderWidth:1,borderRadius:8}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{labels:{color:'#8aa4c8',font:{family:'Outfit',size:12}}},
+        tooltip:{backgroundColor:'#132039',borderColor:'rgba(100,160,255,0.2)',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#8aa4c8'}
+      },
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(100,160,255,0.07)'},ticks:{color:'#8aa4c8',font:{family:'Outfit'}}},
+        x:{grid:{display:false},ticks:{color:'#8aa4c8',font:{family:'Outfit'}}}
+      }
+    }
+  });
+
+  document.getElementById('fp3').classList.remove('active');
+  const rp=document.getElementById('results-pg');
+  rp.style.display='block';rp.classList.add('active');
+  ['stp1','stp2','stp3'].forEach(s=>{document.getElementById(s).classList.remove('active');document.getElementById(s).classList.add('done')});
+  window.scrollTo({top:rp.offsetTop-20,behavior:'smooth'});
+}
+
+function callDoc(){
+  alert('🚨 EMERGENCY\n\nCall 112 (India) or your local emergency number immediately.\n\nDo NOT drive yourself. Call an ambulance or ask someone to take you to the nearest hospital right now.\n\nTime is critical — every minute matters with stroke.');
+}
+function resetAll(){
+  document.getElementById('results-pg').style.display='none';
+  document.getElementById('results-pg').classList.remove('active');
+  sel.clear();
+  document.querySelectorAll('.tg-btn').forEach(b=>b.classList.remove('sel-r','sel-b'));
+  ['stp1','stp2','stp3'].forEach(s=>{document.getElementById(s).classList.remove('done','active')});
+  curStep=0;goStep(1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
